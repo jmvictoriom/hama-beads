@@ -3,1023 +3,978 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hama Bead Pattern Generator</title>
+<title>Pixel Bead Studio — Pattern Generator</title>
+<meta name="description" content="Convert any image into a fuse bead pattern. Supports Hama, Perler, Artkal, Nabbi. Export PDF with board-by-board layout, shopping list, and multiple display styles.">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
-:root {
-  --bg: #1a1a2e;
-  --card: #16213e;
-  --accent: #e94560;
-  --accent2: #0f3460;
-  --text: #eee;
-  --muted: #999;
-  --radius: 12px;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-}
+:root{--bg:#0f0f1a;--card:#1a1a2e;--card2:#16213e;--accent:#e94560;--accent2:#0f3460;--gold:#ffd700;--text:#eee;--muted:#888;--border:rgba(255,255,255,.06);--r:12px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
 
 /* Header */
-.header {
-  text-align: center;
-  padding: 30px 20px 10px;
-}
-.header h1 {
-  font-size: 28px;
-  background: linear-gradient(135deg, #e94560, #FFD700);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-.header p { color: var(--muted); margin-top: 6px; font-size: 14px; }
+header{text-align:center;padding:24px 20px 8px;position:relative}
+header h1{font-size:26px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+header p{color:var(--muted);font-size:13px;margin-top:4px}
+.badge{display:inline-block;background:var(--accent);color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:6px;vertical-align:middle;font-weight:600}
 
 /* Layout */
-.app {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 20px;
-}
-@media (max-width: 800px) {
-  .app { grid-template-columns: 1fr; }
-}
+.app{max-width:1400px;margin:0 auto;padding:16px;display:grid;grid-template-columns:300px 1fr;gap:16px}
+@media(max-width:900px){.app{grid-template-columns:1fr}}
+.sidebar{display:flex;flex-direction:column;gap:12px;max-height:calc(100vh - 90px);overflow-y:auto;padding-right:4px}
+.main{display:flex;flex-direction:column;gap:12px}
 
-/* Sidebar */
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.card {
-  background: var(--card);
-  border-radius: var(--radius);
-  padding: 20px;
-  border: 1px solid rgba(255,255,255,.05);
-}
-.card h3 {
-  font-size: 14px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--accent);
-  margin-bottom: 14px;
-}
+/* Cards */
+.card{background:var(--card);border-radius:var(--r);padding:16px;border:1px solid var(--border)}
+.card h3{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--accent);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.card h3 svg{width:14px;height:14px}
 
 /* Upload */
-.upload-zone {
-  border: 2px dashed rgba(233,69,96,.4);
-  border-radius: var(--radius);
-  padding: 30px 20px;
-  text-align: center;
-  cursor: pointer;
-  transition: all .2s;
-  position: relative;
-  overflow: hidden;
-}
-.upload-zone:hover, .upload-zone.dragover {
-  border-color: var(--accent);
-  background: rgba(233,69,96,.05);
-}
-.upload-zone svg { width: 40px; height: 40px; color: var(--accent); margin-bottom: 10px; }
-.upload-zone p { font-size: 14px; color: var(--muted); }
-.upload-zone span { font-size: 12px; color: #666; }
-#fileInput { display: none; }
-
-/* Preview thumbnail */
-.thumb-wrap {
-  margin-top: 12px;
-  display: none;
-  position: relative;
-}
-.thumb-wrap img {
-  width: 100%;
-  max-height: 180px;
-  object-fit: contain;
-  border-radius: 8px;
-  border: 1px solid rgba(255,255,255,.1);
-}
+.upload{border:2px dashed rgba(233,69,96,.3);border-radius:var(--r);padding:24px 16px;text-align:center;cursor:pointer;transition:.2s}
+.upload:hover,.upload.over{border-color:var(--accent);background:rgba(233,69,96,.04)}
+.upload svg{width:36px;height:36px;color:var(--accent);margin-bottom:8px}
+.upload p{font-size:13px;color:var(--muted)}
+.upload small{font-size:11px;color:#555}
+#fileInput{display:none}
+.thumb{margin-top:10px;display:none}
+.thumb img{width:100%;max-height:140px;object-fit:contain;border-radius:8px;border:1px solid var(--border)}
 
 /* Controls */
-.control { margin-bottom: 14px; }
-.control label {
-  display: flex;
-  justify-content: space-between;
-  font-size: 13px;
-  color: var(--muted);
-  margin-bottom: 6px;
-}
-.control label strong { color: var(--text); }
-input[type="range"] {
-  width: 100%;
-  accent-color: var(--accent);
-  height: 6px;
-}
-select {
-  width: 100%;
-  padding: 8px 12px;
-  background: rgba(255,255,255,.08);
-  border: 1px solid rgba(255,255,255,.1);
-  border-radius: 8px;
-  color: var(--text);
-  font-size: 14px;
-}
-select option { background: var(--card); }
+.ctrl{margin-bottom:10px}
+.ctrl label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:4px}
+.ctrl label b{color:var(--text)}
+input[type=range]{width:100%;accent-color:var(--accent);height:5px;margin-top:2px}
+select,.num-input{width:100%;padding:7px 10px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px}
+select option{background:var(--card)}
+.num-input{-moz-appearance:textfield;text-align:center;width:60px}
+.num-input::-webkit-inner-spin-button{-webkit-appearance:none}
 
-.checkbox-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--muted);
-  margin-bottom: 8px;
-}
-.checkbox-row input { accent-color: var(--accent); }
+.row{display:flex;gap:8px;align-items:center}
+.row .ctrl{flex:1}
+
+.chk{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-bottom:6px;cursor:pointer}
+.chk input{accent-color:var(--accent)}
 
 /* Buttons */
-.btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  padding: 12px;
-  border: none;
-  border-radius: var(--radius);
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all .2s;
-}
-.btn-primary {
-  background: linear-gradient(135deg, var(--accent), #c73e54);
-  color: white;
-}
-.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(233,69,96,.4); }
-.btn-primary:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
-.btn-secondary {
-  background: linear-gradient(135deg, var(--accent2), #1a4a8a);
-  color: white;
-  margin-top: 8px;
-}
-.btn-secondary:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(15,52,96,.4); }
-.btn-secondary:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:10px;border:none;border-radius:var(--r);font-size:14px;font-weight:600;cursor:pointer;transition:.2s}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important;box-shadow:none!important}
+.btn-go{background:linear-gradient(135deg,var(--accent),#c73e54);color:#fff}
+.btn-go:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 15px rgba(233,69,96,.35)}
+.btn-pdf{background:linear-gradient(135deg,var(--accent2),#1a4a8a);color:#fff;margin-top:6px}
+.btn-pdf:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 15px rgba(15,52,96,.35)}
+.btn-png{background:linear-gradient(135deg,#2d6a4f,#40916c);color:#fff;margin-top:6px}
+.btn-png:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 15px rgba(45,106,79,.35)}
+.btn-sm{padding:6px 12px;font-size:12px;width:auto;border-radius:8px}
 
-/* Main area */
-.main { min-height: 400px; }
-.preview-card {
-  background: var(--card);
-  border-radius: var(--radius);
-  padding: 20px;
-  border: 1px solid rgba(255,255,255,.05);
-  min-height: 400px;
-  display: flex;
-  flex-direction: column;
-}
-.preview-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-}
-.preview-header h3 {
-  font-size: 14px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--accent);
-}
-.stats { display: flex; gap: 16px; }
-.stat { text-align: center; }
-.stat-val { font-size: 20px; font-weight: 700; color: var(--accent); }
-.stat-lbl { font-size: 11px; color: var(--muted); }
+/* Stats bar */
+.stats{display:flex;gap:12px;flex-wrap:wrap}
+.stat{text-align:center;flex:1;min-width:60px}
+.stat-v{font-size:20px;font-weight:700;color:var(--accent)}
+.stat-l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
 
-/* Canvas container */
-.canvas-wrap {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: auto;
-  background: rgba(0,0,0,.2);
-  border-radius: 8px;
-  padding: 10px;
-  position: relative;
-}
-.canvas-wrap canvas { image-rendering: pixelated; }
-#emptyState {
-  color: var(--muted);
-  font-size: 15px;
-  text-align: center;
-}
-#emptyState svg { display: block; margin: 0 auto 12px; width: 50px; opacity: .3; }
+/* Preview */
+.preview-wrap{flex:1;min-height:300px;background:rgba(0,0,0,.25);border-radius:8px;overflow:auto;display:flex;align-items:center;justify-content:center;position:relative;padding:8px}
+#previewCanvas{image-rendering:pixelated;cursor:crosshair;max-width:100%}
+.empty-msg{color:#444;font-size:14px;text-align:center}
+.empty-msg svg{display:block;margin:0 auto 10px;width:48px;opacity:.25}
+.spinner{display:none;width:36px;height:36px;border:3px solid rgba(233,69,96,.15);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Tooltip */
+.tooltip{position:absolute;background:#111;color:#fff;padding:4px 10px;border-radius:6px;font-size:11px;pointer-events:none;white-space:nowrap;z-index:10;display:none;border:1px solid var(--accent)}
+
+/* Color palette */
+.palette-wrap{max-height:200px;overflow-y:auto;padding:2px}
+.palette-grid{display:flex;flex-wrap:wrap;gap:3px}
+.pal-color{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;position:relative;transition:.15s}
+.pal-color:hover{transform:scale(1.2);z-index:2}
+.pal-color.off{opacity:.2;border-color:transparent}
+.pal-color.on{border-color:var(--gold);box-shadow:0 0 6px rgba(255,215,0,.3)}
+.pal-color::after{content:'';position:absolute;width:6px;height:6px;border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.18)}
 
 /* Color legend */
-.color-legend {
-  background: var(--card);
-  border-radius: var(--radius);
-  padding: 20px;
-  margin-top: 16px;
-  border: 1px solid rgba(255,255,255,.05);
-  display: none;
-}
-.color-legend h3 {
-  font-size: 14px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--accent);
-  margin-bottom: 14px;
-}
-.colors-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 8px;
-}
-.color-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  background: rgba(255,255,255,.03);
-  border-radius: 8px;
-  font-size: 13px;
-}
-.color-swatch {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 2px solid rgba(255,255,255,.15);
-  flex-shrink: 0;
-  position: relative;
-}
-.color-swatch::after {
-  content: '';
-  position: absolute;
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  top: 50%; left: 50%;
-  transform: translate(-50%,-50%);
-  background: rgba(0,0,0,.2);
-}
-.color-name { flex: 1; }
-.color-count { font-weight: 700; color: var(--accent); }
+.legend{display:none}
+.legend-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px}
+.leg-item{display:flex;align-items:center;gap:6px;padding:5px 8px;background:rgba(255,255,255,.03);border-radius:8px;font-size:12px}
+.leg-sw{width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,.12);flex-shrink:0;position:relative}
+.leg-sw::after{content:'';position:absolute;width:5px;height:5px;border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.18)}
+.leg-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.leg-code{color:var(--muted);font-size:10px}
+.leg-cnt{font-weight:700;color:var(--accent);white-space:nowrap}
 
-/* Loading */
-.spinner {
-  display: none;
-  width: 40px; height: 40px;
-  border: 3px solid rgba(233,69,96,.2);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin .8s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
+/* Boards indicator */
+.boards-info{font-size:12px;color:var(--muted);margin-top:8px;text-align:center}
+.boards-info b{color:var(--gold)}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;margin-bottom:10px}
+.tab{flex:1;padding:6px;text-align:center;font-size:11px;border-radius:8px;cursor:pointer;background:rgba(255,255,255,.04);color:var(--muted);transition:.2s;border:1px solid transparent}
+.tab.active{background:rgba(233,69,96,.12);color:var(--accent);border-color:rgba(233,69,96,.2)}
 </style>
 </head>
 <body>
 
-<div class="header">
-  <h1>Hama Bead Pattern Generator</h1>
-  <p>Sube una imagen, ajusta el tamano y descarga el patron en PDF</p>
-</div>
+<header>
+  <h1>Pixel Bead Studio <span class="badge">v2</span></h1>
+  <p>Convierte cualquier imagen en un patron de hama beads &mdash; 100% en tu navegador</p>
+</header>
 
 <div class="app">
-  <!-- Sidebar -->
-  <div class="sidebar">
-    <!-- Upload -->
-    <div class="card">
-      <h3>Imagen</h3>
-      <div class="upload-zone" id="uploadZone">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
-        </svg>
-        <p>Arrastra tu imagen aqui</p>
-        <span>o haz click para seleccionar</span>
-        <input type="file" id="fileInput" accept="image/*">
-      </div>
-      <div class="thumb-wrap" id="thumbWrap">
-        <img id="thumbImg" alt="preview">
-      </div>
+<!-- ====== SIDEBAR ====== -->
+<div class="sidebar">
+  <!-- Upload -->
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>Imagen</h3>
+    <div class="upload" id="uploadZone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.41a2.25 2.25 0 013.182 0l2.909 2.91m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5z"/></svg>
+      <p>Arrastra o haz click</p>
+      <small>JPG, PNG, WebP, GIF</small>
+      <input type="file" id="fileInput" accept="image/*">
     </div>
+    <div class="thumb" id="thumbWrap"><img id="thumbImg"></div>
+  </div>
 
-    <!-- Settings -->
-    <div class="card">
-      <h3>Ajustes</h3>
-
-      <div class="control">
-        <label>Ancho (cuentas) <strong id="widthVal">29</strong></label>
-        <input type="range" id="gridWidth" min="10" max="80" value="29">
-      </div>
-
-      <div class="control">
-        <label>Estilo</label>
-        <select id="styleSelect">
-          <option value="outline">Contorno grueso (recomendado)</option>
-          <option value="detailed">Detallado</option>
-          <option value="minimal">Minimalista</option>
-        </select>
-      </div>
-
-      <div class="control">
-        <label>Max colores <strong id="maxColVal">10</strong></label>
-        <input type="range" id="maxColors" min="3" max="25" value="10">
-      </div>
-
-      <div class="checkbox-row">
-        <input type="checkbox" id="removeBg" checked>
-        <label for="removeBg">Simplificar fondo</label>
-      </div>
-      <div class="checkbox-row">
-        <input type="checkbox" id="showGrid" checked>
-        <label for="showGrid">Mostrar rejilla en preview</label>
-      </div>
+  <!-- Dimensions -->
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/></svg>Tamano</h3>
+    <div class="ctrl">
+      <label>Ancho <b id="wVal">29</b> cuentas</label>
+      <input type="range" id="gridW" min="10" max="200" value="29">
     </div>
-
-    <!-- Actions -->
-    <div class="card">
-      <h3>Generar</h3>
-      <button class="btn btn-primary" id="generateBtn" disabled>
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
-        Generar Patron
-      </button>
-      <button class="btn btn-secondary" id="downloadBtn" disabled>
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
-        Descargar PDF
-      </button>
+    <div class="ctrl">
+      <label>Alto <b id="hVal">auto</b></label>
+    </div>
+    <div class="ctrl">
+      <label>Tablero</label>
+      <select id="boardSize">
+        <option value="29">Estandar 29x29</option>
+        <option value="25">Japon/China 25x25</option>
+        <option value="20">Pequeno 20x20</option>
+        <option value="30">Grande 30x30</option>
+        <option value="0">Sin division</option>
+      </select>
+    </div>
+    <div class="boards-info" id="boardsInfo" style="display:none">
+      Necesitas <b id="boardsCount">1x1</b> tableros
     </div>
   </div>
 
-  <!-- Main -->
-  <div class="main">
-    <div class="preview-card">
-      <div class="preview-header">
-        <h3>Vista Previa</h3>
-        <div class="stats" id="statsBar" style="display:none">
-          <div class="stat"><div class="stat-val" id="statSize">-</div><div class="stat-lbl">Tamano</div></div>
-          <div class="stat"><div class="stat-val" id="statBeads">-</div><div class="stat-lbl">Cuentas</div></div>
-          <div class="stat"><div class="stat-val" id="statColors">-</div><div class="stat-lbl">Colores</div></div>
-        </div>
-      </div>
-      <div class="canvas-wrap" id="canvasWrap">
-        <div id="emptyState">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.41a2.25 2.25 0 013.182 0l2.909 2.91m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5z"/>
-          </svg>
-          Sube una imagen para empezar
-        </div>
-        <div class="spinner" id="spinner"></div>
-        <canvas id="previewCanvas" style="display:none"></canvas>
+  <!-- Brand & Colors -->
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.098 19.902a3.75 3.75 0 005.304 0l6.401-6.402M6.75 21A3.75 3.75 0 013 17.25V4.125C3 3.504 3.504 3 4.125 3h5.25c.621 0 1.125.504 1.125 1.125v4.072M6.75 21a3.75 3.75 0 003.75-3.75V8.197M6.75 21h13.125c.621 0 1.125-.504 1.125-1.125v-5.25c0-.621-.504-1.125-1.125-1.125h-4.072M10.5 8.197l2.88-2.88c.438-.439 1.15-.439 1.59 0l3.712 3.713c.44.44.44 1.152 0 1.59l-2.879 2.88M6.75 17.25h.008v.008H6.75v-.008z"/></svg>Marca y Colores</h3>
+    <div class="ctrl">
+      <label>Marca de cuentas</label>
+      <select id="brand">
+        <option value="hama">Hama Midi (52 colores)</option>
+        <option value="perler">Perler (48 colores)</option>
+        <option value="artkal">Artkal S-5mm (50 colores)</option>
+        <option value="nabbi">Nabbi (30 colores)</option>
+      </select>
+    </div>
+    <div class="ctrl">
+      <label>Max colores <b id="maxCVal">12</b></label>
+      <input type="range" id="maxColors" min="2" max="40" value="12">
+    </div>
+    <div class="ctrl">
+      <label>Umbral minimo <b id="threshVal">0</b> cuentas</label>
+      <input type="range" id="threshold" min="0" max="20" value="0">
+    </div>
+    <small style="color:var(--muted);font-size:11px">Click en un color para activar/desactivar:</small>
+    <div class="palette-wrap"><div class="palette-grid" id="paletteGrid"></div></div>
+  </div>
+
+  <!-- Processing -->
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/><circle cx="12" cy="12" r="3"/></svg>Procesado</h3>
+    <div class="ctrl">
+      <label>Dithering</label>
+      <select id="dithering">
+        <option value="none">Sin dithering</option>
+        <option value="floyd" selected>Floyd-Steinberg</option>
+        <option value="ordered">Ordered (Bayer 4x4)</option>
+      </select>
+    </div>
+    <div class="ctrl">
+      <label>Distancia de color</label>
+      <select id="colorDist">
+        <option value="ciede2000" selected>CIEDE2000 (mejor)</option>
+        <option value="cie76">CIE76 (rapido)</option>
+        <option value="rgb">RGB ponderado</option>
+      </select>
+    </div>
+    <label class="chk"><input type="checkbox" id="removeBg"> Simplificar fondo</label>
+    <label class="chk"><input type="checkbox" id="showGrid" checked> Mostrar rejilla</label>
+  </div>
+
+  <!-- Generate -->
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>Exportar</h3>
+    <div class="ctrl">
+      <label>Estilo del patron</label>
+      <select id="pdfStyle">
+        <option value="circles">Circulos coloreados</option>
+        <option value="colorNum">Numeros + color</option>
+        <option value="symbols">Simbolos + color</option>
+        <option value="colorBox">Cajas coloreadas</option>
+        <option value="numOnly">Solo numeros</option>
+        <option value="symOnly">Solo simbolos</option>
+      </select>
+    </div>
+    <div class="ctrl">
+      <label>Tamano celda PDF <b id="cellVal">5</b>mm</label>
+      <input type="range" id="cellSize" min="2" max="10" value="5" step="0.5">
+    </div>
+    <button class="btn btn-go" id="genBtn" disabled>Generar Patron</button>
+    <button class="btn btn-pdf" id="pdfBtn" disabled>Descargar PDF</button>
+    <button class="btn btn-png" id="pngBtn" disabled>Descargar PNG</button>
+  </div>
+</div>
+
+<!-- ====== MAIN ====== -->
+<div class="main">
+  <div class="card" style="flex:1;display:flex;flex-direction:column">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <h3 style="margin:0">Vista Previa</h3>
+      <div class="stats" id="statsBar" style="display:none">
+        <div class="stat"><div class="stat-v" id="sSize">-</div><div class="stat-l">Tamano</div></div>
+        <div class="stat"><div class="stat-v" id="sBeads">-</div><div class="stat-l">Cuentas</div></div>
+        <div class="stat"><div class="stat-v" id="sColors">-</div><div class="stat-l">Colores</div></div>
+        <div class="stat"><div class="stat-v" id="sBoards">-</div><div class="stat-l">Tableros</div></div>
       </div>
     </div>
-    <div class="color-legend" id="colorLegend">
-      <h3>Colores necesarios</h3>
-      <div class="colors-grid" id="colorsGrid"></div>
+    <div class="preview-wrap" id="previewWrap">
+      <div class="empty-msg" id="emptyMsg">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.41a2.25 2.25 0 013.182 0l2.909 2.91m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5z"/></svg>
+        Sube una imagen para empezar
+      </div>
+      <div class="spinner" id="spinner"></div>
+      <canvas id="cvs" style="display:none"></canvas>
+      <div class="tooltip" id="tooltip"></div>
     </div>
   </div>
+  <div class="card legend" id="legendCard">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z"/><circle cx="6" cy="6" r=".75"/></svg>Shopping List</h3>
+    <div class="legend-grid" id="legendGrid"></div>
+  </div>
+</div>
 </div>
 
 <script>
-// ========== HAMA BEAD COLOR PALETTE ==========
-const HAMA_PALETTE = [
-  { name: "Blanco",         hex: "#FFFFFF", rgb: [255,255,255] },
-  { name: "Crema",          hex: "#FFF4CC", rgb: [255,244,204] },
-  { name: "Amarillo claro", hex: "#FFF59D", rgb: [255,245,157] },
-  { name: "Amarillo",       hex: "#FFD700", rgb: [255,215,0] },
-  { name: "Dorado",         hex: "#DAA520", rgb: [218,165,32] },
-  { name: "Naranja claro",  hex: "#FFB347", rgb: [255,179,71] },
-  { name: "Naranja",        hex: "#FF8C00", rgb: [255,140,0] },
-  { name: "Melocoton",      hex: "#FFDAB9", rgb: [255,218,185] },
-  { name: "Piel claro",     hex: "#FFE4C4", rgb: [255,228,196] },
-  { name: "Piel",           hex: "#FFCCAA", rgb: [255,204,170] },
-  { name: "Piel oscuro",    hex: "#D2A679", rgb: [210,166,121] },
-  { name: "Rosa claro",     hex: "#FFB6C1", rgb: [255,182,193] },
-  { name: "Rosa",           hex: "#FF69B4", rgb: [255,105,180] },
-  { name: "Rosa fuerte",    hex: "#FF1493", rgb: [255,20,147] },
-  { name: "Rojo",           hex: "#DC2626", rgb: [220,38,38] },
-  { name: "Rojo oscuro",    hex: "#8B0000", rgb: [139,0,0] },
-  { name: "Magenta",        hex: "#C71585", rgb: [199,21,133] },
-  { name: "Lavanda",        hex: "#CE93D8", rgb: [206,147,216] },
-  { name: "Lila",           hex: "#DDA0DD", rgb: [221,160,221] },
-  { name: "Morado",         hex: "#800080", rgb: [128,0,128] },
-  { name: "Azul pastel",    hex: "#B0C4FF", rgb: [176,196,255] },
-  { name: "Azul cielo",     hex: "#87CEEB", rgb: [135,206,235] },
-  { name: "Azul claro",     hex: "#6495ED", rgb: [100,149,237] },
-  { name: "Azul",           hex: "#2563EB", rgb: [37,99,235] },
-  { name: "Azul oscuro",    hex: "#1E3A7B", rgb: [30,58,123] },
-  { name: "Azul marino",    hex: "#0D1B5E", rgb: [13,27,94] },
-  { name: "Turquesa",       hex: "#40E0D0", rgb: [64,224,208] },
-  { name: "Verde claro",    hex: "#90EE90", rgb: [144,238,144] },
-  { name: "Verde",          hex: "#228B22", rgb: [34,139,34] },
-  { name: "Verde oscuro",   hex: "#006400", rgb: [0,100,0] },
-  { name: "Verde lima",     hex: "#7CFC00", rgb: [124,252,0] },
-  { name: "Marron claro",   hex: "#D2B48C", rgb: [210,180,140] },
-  { name: "Marron",         hex: "#8B4513", rgb: [139,69,19] },
-  { name: "Marron oscuro",  hex: "#3E1F0D", rgb: [62,31,13] },
-  { name: "Gris claro",     hex: "#C0C0C0", rgb: [192,192,192] },
-  { name: "Gris",           hex: "#808080", rgb: [128,128,128] },
-  { name: "Gris oscuro",    hex: "#404040", rgb: [64,64,64] },
-  { name: "Negro",          hex: "#1A1A1A", rgb: [26,26,26] },
-];
+// =============================================
+//  BEAD COLOR PALETTES (real manufacturer data)
+// =============================================
+const PALETTES = {
+hama: [
+  {id:"H01",name:"Blanco",hex:"#F5F5F5",rgb:[245,245,245]},{id:"H02",name:"Crema",hex:"#FFF4CC",rgb:[255,244,204]},
+  {id:"H03",name:"Amarillo",hex:"#FFD700",rgb:[255,215,0]},{id:"H04",name:"Naranja",hex:"#FF8C00",rgb:[255,140,0]},
+  {id:"H05",name:"Rojo",hex:"#DC2626",rgb:[220,38,38]},{id:"H06",name:"Rosa",hex:"#FF69B4",rgb:[255,105,180]},
+  {id:"H07",name:"Morado",hex:"#7B2D8E",rgb:[123,45,142]},{id:"H08",name:"Azul",hex:"#2563EB",rgb:[37,99,235]},
+  {id:"H09",name:"Azul claro",hex:"#60A5FA",rgb:[96,165,250]},{id:"H10",name:"Verde",hex:"#16A34A",rgb:[22,163,74]},
+  {id:"H11",name:"Verde claro",hex:"#4ADE80",rgb:[74,222,128]},{id:"H12",name:"Marron",hex:"#8B4513",rgb:[139,69,19]},
+  {id:"H13",name:"Gris transp.",hex:"#9CA3AF",rgb:[156,163,175]},{id:"H17",name:"Gris",hex:"#6B7280",rgb:[107,114,128]},
+  {id:"H18",name:"Negro",hex:"#1A1A1A",rgb:[26,26,26]},{id:"H20",name:"Marron claro",hex:"#D2B48C",rgb:[210,180,140]},
+  {id:"H21",name:"Marron oscuro",hex:"#5C3317",rgb:[92,51,23]},{id:"H22",name:"Rojo oscuro",hex:"#991B1B",rgb:[153,27,27]},
+  {id:"H26",name:"Piel",hex:"#FFCCAA",rgb:[255,204,170]},{id:"H27",name:"Beige",hex:"#F5DEB3",rgb:[245,222,179]},
+  {id:"H28",name:"Verde oscuro",hex:"#15803D",rgb:[21,128,61]},{id:"H29",name:"Rojo frambuesa",hex:"#BE123C",rgb:[190,18,60]},
+  {id:"H30",name:"Burdeos",hex:"#881337",rgb:[136,19,55]},{id:"H31",name:"Turquesa",hex:"#2DD4BF",rgb:[45,212,191]},
+  {id:"H32",name:"Fucsia",hex:"#DB2777",rgb:[219,39,119]},{id:"H33",name:"Amarillo neon",hex:"#FACC15",rgb:[250,204,21]},
+  {id:"H34",name:"Verde neon",hex:"#22C55E",rgb:[34,197,94]},{id:"H35",name:"Azul neon",hex:"#3B82F6",rgb:[59,130,246]},
+  {id:"H36",name:"Rosa neon",hex:"#EC4899",rgb:[236,72,153]},{id:"H37",name:"Naranja neon",hex:"#FB923C",rgb:[251,146,60]},
+  {id:"H38",name:"Rojo neon",hex:"#EF4444",rgb:[239,68,68]},{id:"H42",name:"Azul pastel",hex:"#93C5FD",rgb:[147,197,253]},
+  {id:"H43",name:"Verde pastel",hex:"#86EFAC",rgb:[134,239,172]},{id:"H44",name:"Rosa pastel",hex:"#FBCFE8",rgb:[251,207,232]},
+  {id:"H45",name:"Amarillo pastel",hex:"#FDE68A",rgb:[253,230,138]},{id:"H46",name:"Lila pastel",hex:"#D8B4FE",rgb:[216,180,254]},
+  {id:"H47",name:"Azul marino",hex:"#1E3A8A",rgb:[30,58,138]},{id:"H48",name:"Verde menta",hex:"#6EE7B7",rgb:[110,231,183]},
+  {id:"H49",name:"Turquesa osc.",hex:"#0E7490",rgb:[14,116,144]},{id:"H51",name:"Ciruela",hex:"#6B21A8",rgb:[107,33,168]},
+  {id:"H58",name:"Melocoton clr.",hex:"#FFE4C4",rgb:[255,228,196]},{id:"H59",name:"Crema rosa",hex:"#FECDD3",rgb:[254,205,211]},
+  {id:"H60",name:"Piel oscuro",hex:"#D2A679",rgb:[210,166,121]},{id:"H61",name:"Marron tostado",hex:"#92400E",rgb:[146,64,14]},
+  {id:"H62",name:"Terracota",hex:"#C2410C",rgb:[194,65,12]},{id:"H63",name:"Oliva",hex:"#65A30D",rgb:[101,163,13]},
+  {id:"H64",name:"Gris claro",hex:"#D1D5DB",rgb:[209,213,219]},{id:"H65",name:"Azul medio",hex:"#3B82F6",rgb:[59,130,246]},
+  {id:"H66",name:"Lila",hex:"#C084FC",rgb:[192,132,252]},{id:"H70",name:"Gris oscuro",hex:"#374151",rgb:[55,65,81]},
+  {id:"H71",name:"Verde musgo",hex:"#4D7C0F",rgb:[77,124,15]},{id:"H75",name:"Melocoton",hex:"#FFDAB9",rgb:[255,218,185]},
+  {id:"H76",name:"Rosa claro",hex:"#FDA4AF",rgb:[253,164,175]},{id:"H77",name:"Lavanda",hex:"#C4B5FD",rgb:[196,181,253]},
+  {id:"H78",name:"Magenta",hex:"#A21CAF",rgb:[162,28,175]},
+],
+perler: [
+  {id:"P01",name:"White",hex:"#F5F5F5",rgb:[245,245,245]},{id:"P02",name:"Cream",hex:"#FFF8DC",rgb:[255,248,220]},
+  {id:"P03",name:"Yellow",hex:"#FFD700",rgb:[255,215,0]},{id:"P04",name:"Orange",hex:"#FF8C00",rgb:[255,140,0]},
+  {id:"P05",name:"Red",hex:"#DC2626",rgb:[220,38,38]},{id:"P06",name:"Bubblegum",hex:"#FF69B4",rgb:[255,105,180]},
+  {id:"P07",name:"Purple",hex:"#7C3AED",rgb:[124,58,237]},{id:"P08",name:"Dark Blue",hex:"#1D4ED8",rgb:[29,78,216]},
+  {id:"P09",name:"Light Blue",hex:"#60A5FA",rgb:[96,165,250]},{id:"P10",name:"Dark Green",hex:"#15803D",rgb:[21,128,61]},
+  {id:"P11",name:"Green",hex:"#22C55E",rgb:[34,197,94]},{id:"P12",name:"Brown",hex:"#92400E",rgb:[146,64,14]},
+  {id:"P13",name:"Grey",hex:"#6B7280",rgb:[107,114,128]},{id:"P14",name:"Black",hex:"#1A1A1A",rgb:[26,26,26]},
+  {id:"P15",name:"Rust",hex:"#B91C1C",rgb:[185,28,28]},{id:"P16",name:"Lt Brown",hex:"#D2B48C",rgb:[210,180,140]},
+  {id:"P17",name:"Peach",hex:"#FFCCAA",rgb:[255,204,170]},{id:"P18",name:"Tan",hex:"#F5DEB3",rgb:[245,222,179]},
+  {id:"P19",name:"Magenta",hex:"#DB2777",rgb:[219,39,119]},{id:"P20",name:"Pastel Blue",hex:"#93C5FD",rgb:[147,197,253]},
+  {id:"P21",name:"Pastel Green",hex:"#86EFAC",rgb:[134,239,172]},{id:"P22",name:"Pastel Lav.",hex:"#D8B4FE",rgb:[216,180,254]},
+  {id:"P23",name:"Pastel Yellow",hex:"#FDE68A",rgb:[253,230,138]},{id:"P24",name:"Pastel Pink",hex:"#FBCFE8",rgb:[251,207,232]},
+  {id:"P25",name:"Neon Yellow",hex:"#FACC15",rgb:[250,204,21]},{id:"P26",name:"Neon Orange",hex:"#FB923C",rgb:[251,146,60]},
+  {id:"P27",name:"Neon Green",hex:"#4ADE80",rgb:[74,222,128]},{id:"P28",name:"Neon Pink",hex:"#F472B6",rgb:[244,114,182]},
+  {id:"P29",name:"Robin Egg",hex:"#67E8F9",rgb:[103,232,249]},{id:"P30",name:"Kiwi",hex:"#BEF264",rgb:[190,242,100]},
+  {id:"P31",name:"Turquoise",hex:"#2DD4BF",rgb:[45,212,191]},{id:"P32",name:"Plum",hex:"#6B21A8",rgb:[107,33,168]},
+  {id:"P33",name:"Navy",hex:"#1E3A8A",rgb:[30,58,138]},{id:"P34",name:"Dk Grey",hex:"#374151",rgb:[55,65,81]},
+  {id:"P35",name:"Lt Grey",hex:"#D1D5DB",rgb:[209,213,219]},{id:"P36",name:"Blush",hex:"#FDA4AF",rgb:[253,164,175]},
+  {id:"P37",name:"Sand",hex:"#E7D5B0",rgb:[231,213,176]},{id:"P38",name:"Dk Red",hex:"#991B1B",rgb:[153,27,27]},
+  {id:"P39",name:"Lavender",hex:"#C4B5FD",rgb:[196,181,253]},{id:"P40",name:"Cranapple",hex:"#BE123C",rgb:[190,18,60]},
+  {id:"P41",name:"Sky",hex:"#7DD3FC",rgb:[125,211,252]},{id:"P42",name:"Mint",hex:"#6EE7B7",rgb:[110,231,183]},
+  {id:"P43",name:"Prickly Pear",hex:"#A3E635",rgb:[163,230,53]},{id:"P44",name:"Terracotta",hex:"#C2410C",rgb:[194,65,12]},
+  {id:"P45",name:"Fawn",hex:"#D2A679",rgb:[210,166,121]},{id:"P46",name:"Hot Coral",hex:"#F43F5E",rgb:[244,63,94]},
+  {id:"P47",name:"Toasted",hex:"#78350F",rgb:[120,53,15]},{id:"P48",name:"Dk Brown",hex:"#5C3317",rgb:[92,51,23]},
+],
+artkal: [
+  {id:"S01",name:"White",hex:"#F5F5F5",rgb:[245,245,245]},{id:"S02",name:"Cream",hex:"#FFF8DC",rgb:[255,248,220]},
+  {id:"S03",name:"Lemon",hex:"#FEF08A",rgb:[254,240,138]},{id:"S04",name:"Yellow",hex:"#EAB308",rgb:[234,179,8]},
+  {id:"S05",name:"Gold",hex:"#CA8A04",rgb:[202,138,4]},{id:"S06",name:"Lt Orange",hex:"#FDBA74",rgb:[253,186,116]},
+  {id:"S07",name:"Orange",hex:"#EA580C",rgb:[234,88,12]},{id:"S08",name:"Coral",hex:"#F87171",rgb:[248,113,113]},
+  {id:"S09",name:"Red",hex:"#DC2626",rgb:[220,38,38]},{id:"S10",name:"Dk Red",hex:"#991B1B",rgb:[153,27,27]},
+  {id:"S11",name:"Cherry",hex:"#BE123C",rgb:[190,18,60]},{id:"S12",name:"Blush",hex:"#FECDD3",rgb:[254,205,211]},
+  {id:"S13",name:"Pink",hex:"#F472B6",rgb:[244,114,182]},{id:"S14",name:"Hot Pink",hex:"#DB2777",rgb:[219,39,119]},
+  {id:"S15",name:"Magenta",hex:"#A21CAF",rgb:[162,28,175]},{id:"S16",name:"Lt Purple",hex:"#D8B4FE",rgb:[216,180,254]},
+  {id:"S17",name:"Purple",hex:"#7C3AED",rgb:[124,58,237]},{id:"S18",name:"Dk Purple",hex:"#581C87",rgb:[88,28,135]},
+  {id:"S19",name:"Lavender",hex:"#C4B5FD",rgb:[196,181,253]},{id:"S20",name:"Periwinkle",hex:"#818CF8",rgb:[129,140,248]},
+  {id:"S21",name:"Lt Blue",hex:"#93C5FD",rgb:[147,197,253]},{id:"S22",name:"Sky Blue",hex:"#60A5FA",rgb:[96,165,250]},
+  {id:"S23",name:"Blue",hex:"#2563EB",rgb:[37,99,235]},{id:"S24",name:"Dk Blue",hex:"#1D4ED8",rgb:[29,78,216]},
+  {id:"S25",name:"Navy",hex:"#1E3A8A",rgb:[30,58,138]},{id:"S26",name:"Teal",hex:"#0D9488",rgb:[13,148,136]},
+  {id:"S27",name:"Turquoise",hex:"#2DD4BF",rgb:[45,212,191]},{id:"S28",name:"Aqua",hex:"#67E8F9",rgb:[103,232,249]},
+  {id:"S29",name:"Mint",hex:"#6EE7B7",rgb:[110,231,183]},{id:"S30",name:"Lt Green",hex:"#86EFAC",rgb:[134,239,172]},
+  {id:"S31",name:"Green",hex:"#22C55E",rgb:[34,197,94]},{id:"S32",name:"Dk Green",hex:"#15803D",rgb:[21,128,61]},
+  {id:"S33",name:"Forest",hex:"#166534",rgb:[22,101,52]},{id:"S34",name:"Olive",hex:"#65A30D",rgb:[101,163,13]},
+  {id:"S35",name:"Lime",hex:"#A3E635",rgb:[163,230,53]},{id:"S36",name:"Peach",hex:"#FFDAB9",rgb:[255,218,185]},
+  {id:"S37",name:"Skin Lt",hex:"#FFE4C4",rgb:[255,228,196]},{id:"S38",name:"Skin",hex:"#FFCCAA",rgb:[255,204,170]},
+  {id:"S39",name:"Skin Dk",hex:"#D2A679",rgb:[210,166,121]},{id:"S40",name:"Tan",hex:"#D2B48C",rgb:[210,180,140]},
+  {id:"S41",name:"Lt Brown",hex:"#C2410C",rgb:[194,65,12]},{id:"S42",name:"Brown",hex:"#92400E",rgb:[146,64,14]},
+  {id:"S43",name:"Dk Brown",hex:"#5C3317",rgb:[92,51,23]},{id:"S44",name:"Chocolate",hex:"#78350F",rgb:[120,53,15]},
+  {id:"S45",name:"Lt Grey",hex:"#D1D5DB",rgb:[209,213,219]},{id:"S46",name:"Grey",hex:"#9CA3AF",rgb:[156,163,175]},
+  {id:"S47",name:"Dk Grey",hex:"#4B5563",rgb:[75,85,99]},{id:"S48",name:"Charcoal",hex:"#374151",rgb:[55,65,81]},
+  {id:"S49",name:"Black",hex:"#1A1A1A",rgb:[26,26,26]},{id:"S50",name:"Sand",hex:"#E7D5B0",rgb:[231,213,176]},
+],
+nabbi: [
+  {id:"N01",name:"Blanco",hex:"#F5F5F5",rgb:[245,245,245]},{id:"N02",name:"Amarillo",hex:"#FFD700",rgb:[255,215,0]},
+  {id:"N03",name:"Naranja",hex:"#FF8C00",rgb:[255,140,0]},{id:"N04",name:"Rojo",hex:"#DC2626",rgb:[220,38,38]},
+  {id:"N05",name:"Rosa",hex:"#FF69B4",rgb:[255,105,180]},{id:"N06",name:"Fucsia",hex:"#DB2777",rgb:[219,39,119]},
+  {id:"N07",name:"Lila",hex:"#C084FC",rgb:[192,132,252]},{id:"N08",name:"Morado",hex:"#7C3AED",rgb:[124,58,237]},
+  {id:"N09",name:"Azul claro",hex:"#60A5FA",rgb:[96,165,250]},{id:"N10",name:"Azul",hex:"#2563EB",rgb:[37,99,235]},
+  {id:"N11",name:"Azul marino",hex:"#1E3A8A",rgb:[30,58,138]},{id:"N12",name:"Turquesa",hex:"#2DD4BF",rgb:[45,212,191]},
+  {id:"N13",name:"Verde claro",hex:"#4ADE80",rgb:[74,222,128]},{id:"N14",name:"Verde",hex:"#16A34A",rgb:[22,163,74]},
+  {id:"N15",name:"Verde oscuro",hex:"#15803D",rgb:[21,128,61]},{id:"N16",name:"Marron claro",hex:"#D2B48C",rgb:[210,180,140]},
+  {id:"N17",name:"Marron",hex:"#8B4513",rgb:[139,69,19]},{id:"N18",name:"Marron oscuro",hex:"#5C3317",rgb:[92,51,23]},
+  {id:"N19",name:"Piel claro",hex:"#FFE4C4",rgb:[255,228,196]},{id:"N20",name:"Piel",hex:"#FFCCAA",rgb:[255,204,170]},
+  {id:"N21",name:"Melocoton",hex:"#FFDAB9",rgb:[255,218,185]},{id:"N22",name:"Gris claro",hex:"#D1D5DB",rgb:[209,213,219]},
+  {id:"N23",name:"Gris",hex:"#6B7280",rgb:[107,114,128]},{id:"N24",name:"Gris oscuro",hex:"#374151",rgb:[55,65,81]},
+  {id:"N25",name:"Negro",hex:"#1A1A1A",rgb:[26,26,26]},{id:"N26",name:"Crema",hex:"#FFF4CC",rgb:[255,244,204]},
+  {id:"N27",name:"Rosa pastel",hex:"#FBCFE8",rgb:[251,207,232]},{id:"N28",name:"Azul pastel",hex:"#93C5FD",rgb:[147,197,253]},
+  {id:"N29",name:"Verde pastel",hex:"#86EFAC",rgb:[134,239,172]},{id:"N30",name:"Rojo oscuro",hex:"#991B1B",rgb:[153,27,27]},
+]};
 
-// ========== STATE ==========
-let sourceImage = null;
-let patternData = null; // { grid, width, height, colors }
+// =============================================
+//  COLOR SCIENCE
+// =============================================
+function srgbToLinear(c){c/=255;return c<=.04045?c/12.92:Math.pow((c+.055)/1.055,2.4)}
+function rgbToXyz(r,g,b){
+  const rl=srgbToLinear(r),gl=srgbToLinear(g),bl=srgbToLinear(b);
+  return[rl*.4124564+gl*.3575761+bl*.1804375,rl*.2126729+gl*.7151522+bl*.0721750,rl*.0193339+gl*.1191920+bl*.9503041];
+}
+function xyzToLab(x,y,z){
+  x/=.95047;y/=1;z/=1.08883;
+  const f=v=>v>.008856?Math.cbrt(v):7.787*v+16/116;
+  const fy=f(y);
+  return[116*fy-16,500*(f(x)-fy),200*(fy-f(z))];
+}
+function rgbToLab(r,g,b){const[x,y,z]=rgbToXyz(r,g,b);return xyzToLab(x,y,z)}
 
-// ========== DOM ==========
-const $ = id => document.getElementById(id);
-const uploadZone = $('uploadZone');
-const fileInput = $('fileInput');
-const thumbWrap = $('thumbWrap');
-const thumbImg = $('thumbImg');
-const gridWidthSlider = $('gridWidth');
-const widthVal = $('widthVal');
-const maxColorsSlider = $('maxColors');
-const maxColVal = $('maxColVal');
-const generateBtn = $('generateBtn');
-const downloadBtn = $('downloadBtn');
-const previewCanvas = $('previewCanvas');
-const canvasWrap = $('canvasWrap');
-const emptyState = $('emptyState');
-const spinner = $('spinner');
-const statsBar = $('statsBar');
-const colorLegend = $('colorLegend');
-const colorsGrid = $('colorsGrid');
+function deltaE76(lab1,lab2){
+  const dl=lab1[0]-lab2[0],da=lab1[1]-lab2[1],db=lab1[2]-lab2[2];
+  return Math.sqrt(dl*dl+da*da+db*db);
+}
+function deltaE2000(lab1,lab2){
+  const[L1,a1,b1]=lab1,[L2,a2,b2]=lab2;
+  const avg_Lp=(L1+L2)/2,C1=Math.sqrt(a1*a1+b1*b1),C2=Math.sqrt(a2*a2+b2*b2),avg_C=(C1+C2)/2;
+  const G=.5*(1-Math.sqrt(Math.pow(avg_C,7)/(Math.pow(avg_C,7)+Math.pow(25,7))));
+  const a1p=a1*(1+G),a2p=a2*(1+G),C1p=Math.sqrt(a1p*a1p+b1*b1),C2p=Math.sqrt(a2p*a2p+b2*b2),avg_Cp=(C1p+C2p)/2;
+  let h1p=Math.atan2(b1,a1p)*180/Math.PI;if(h1p<0)h1p+=360;
+  let h2p=Math.atan2(b2,a2p)*180/Math.PI;if(h2p<0)h2p+=360;
+  let dHp=h2p-h1p;if(Math.abs(dHp)>180)dHp+=(dHp>0?-360:360);
+  const dLp=L2-L1,dCp=C2p-C1p;
+  const dHpSin=2*Math.sqrt(C1p*C2p)*Math.sin(dHp*Math.PI/360);
+  let avg_Hp=(h1p+h2p)/2;if(Math.abs(h1p-h2p)>180)avg_Hp+=180;
+  const T=1-.17*Math.cos((avg_Hp-30)*Math.PI/180)+.24*Math.cos(2*avg_Hp*Math.PI/180)+.32*Math.cos((3*avg_Hp+6)*Math.PI/180)-.2*Math.cos((4*avg_Hp-63)*Math.PI/180);
+  const SL=1+.015*(avg_Lp-50)**2/Math.sqrt(20+(avg_Lp-50)**2);
+  const SC=1+.045*avg_Cp,SH=1+.015*avg_Cp*T;
+  const RT=-2*Math.sqrt(Math.pow(avg_Cp,7)/(Math.pow(avg_Cp,7)+Math.pow(25,7)))*Math.sin(60*Math.exp(-((avg_Hp-275)/25)**2)*Math.PI/180);
+  return Math.sqrt((dLp/SL)**2+(dCp/SC)**2+(dHpSin/SH)**2+RT*(dCp/SC)*(dHpSin/SH));
+}
+function distRGB(c1,c2){
+  const rm=(c1[0]+c2[0])/2,dr=c1[0]-c2[0],dg=c1[1]-c2[1],db=c1[2]-c2[2];
+  return Math.sqrt((2+rm/256)*dr*dr+4*dg*dg+(2+(255-rm)/256)*db*db);
+}
 
-// ========== UPLOAD ==========
-uploadZone.addEventListener('click', () => fileInput.click());
-fileInput.addEventListener('change', e => { if (e.target.files[0]) loadImage(e.target.files[0]); });
-uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
-uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
-uploadZone.addEventListener('drop', e => {
-  e.preventDefault();
-  uploadZone.classList.remove('dragover');
-  if (e.dataTransfer.files[0]) loadImage(e.dataTransfer.files[0]);
-});
+let distFn=deltaE2000;
+let labCache=new Map();
+function getLab(rgb){
+  const k=rgb[0]<<16|rgb[1]<<8|rgb[2];
+  if(!labCache.has(k))labCache.set(k,rgbToLab(...rgb));
+  return labCache.get(k);
+}
+function colorDist(c1,c2){
+  if(distFn===distRGB)return distRGB(c1,c2);
+  return distFn(getLab(c1),getLab(c2));
+}
 
-function loadImage(file) {
-  const reader = new FileReader();
-  reader.onload = e => {
-    const img = new Image();
-    img.onload = () => {
-      sourceImage = img;
-      thumbImg.src = e.target.result;
-      thumbWrap.style.display = 'block';
-      generateBtn.disabled = false;
-      generatePattern();
-    };
-    img.src = e.target.result;
+// =============================================
+//  STATE
+// =============================================
+let srcImg=null,pattern=null;
+let activePalette=[];   // filtered palette with enabled flag
+
+// =============================================
+//  DOM
+// =============================================
+const $=id=>document.getElementById(id);
+const cvs=$('cvs'),ctx=cvs.getContext('2d');
+
+// =============================================
+//  PALETTE UI
+// =============================================
+function buildPalette(){
+  const brand=$('brand').value;
+  const colors=PALETTES[brand];
+  activePalette=colors.map(c=>({...c,enabled:true}));
+  renderPaletteGrid();
+}
+function renderPaletteGrid(){
+  const g=$('paletteGrid');
+  g.innerHTML=activePalette.map((c,i)=>
+    `<div class="pal-color ${c.enabled?'on':'off'}" data-i="${i}" title="${c.id} ${c.name}" style="background:${c.hex}"></div>`
+  ).join('');
+  g.querySelectorAll('.pal-color').forEach(el=>{
+    el.addEventListener('click',()=>{
+      const i=+el.dataset.i;
+      activePalette[i].enabled=!activePalette[i].enabled;
+      el.classList.toggle('on');el.classList.toggle('off');
+    });
+  });
+}
+$('brand').addEventListener('change',()=>{buildPalette();if(srcImg)generate()});
+buildPalette();
+
+// =============================================
+//  UPLOAD
+// =============================================
+const uz=$('uploadZone'),fi=$('fileInput');
+uz.addEventListener('click',()=>fi.click());
+fi.addEventListener('change',e=>{if(e.target.files[0])loadImg(e.target.files[0])});
+uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('over')});
+uz.addEventListener('dragleave',()=>uz.classList.remove('over'));
+uz.addEventListener('drop',e=>{e.preventDefault();uz.classList.remove('over');if(e.dataTransfer.files[0])loadImg(e.dataTransfer.files[0])});
+
+function loadImg(file){
+  const r=new FileReader();
+  r.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{srcImg=img;$('thumbImg').src=e.target.result;$('thumbWrap').style.display='block';$('genBtn').disabled=false;generate()};
+    img.src=e.target.result;
   };
-  reader.readAsDataURL(file);
+  r.readAsDataURL(file);
 }
 
-// ========== SLIDERS ==========
-gridWidthSlider.addEventListener('input', () => {
-  widthVal.textContent = gridWidthSlider.value;
-  if (sourceImage) generatePattern();
+// =============================================
+//  CONTROLS
+// =============================================
+const sliders=[
+  ['gridW','wVal',v=>v+' cuentas'?v:v],
+  ['maxColors','maxCVal',null],
+  ['threshold','threshVal',v=>v],
+  ['cellSize','cellVal',v=>v],
+];
+sliders.forEach(([sid,vid])=>{
+  $(sid).addEventListener('input',()=>{$(vid).textContent=$(sid).value;});
 });
-maxColorsSlider.addEventListener('input', () => {
-  maxColVal.textContent = maxColorsSlider.value;
-  if (sourceImage) generatePattern();
+$('gridW').addEventListener('change',()=>{if(srcImg)generate()});
+$('maxColors').addEventListener('change',()=>{if(srcImg)generate()});
+$('threshold').addEventListener('change',()=>{if(srcImg)generate()});
+$('dithering').addEventListener('change',()=>{if(srcImg)generate()});
+$('colorDist').addEventListener('change',()=>{
+  const v=$('colorDist').value;
+  distFn=v==='ciede2000'?deltaE2000:v==='cie76'?deltaE76:distRGB;
+  labCache.clear();if(srcImg)generate();
 });
-$('styleSelect').addEventListener('change', () => { if (sourceImage) generatePattern(); });
-$('removeBg').addEventListener('change', () => { if (sourceImage) generatePattern(); });
-$('showGrid').addEventListener('change', () => { if (patternData) renderPreview(); });
-generateBtn.addEventListener('click', generatePattern);
-downloadBtn.addEventListener('click', downloadPDF);
+$('removeBg').addEventListener('change',()=>{if(srcImg)generate()});
+$('showGrid').addEventListener('change',()=>{if(pattern)renderPreview()});
+$('genBtn').addEventListener('click',generate);
+$('pdfBtn').addEventListener('click',exportPDF);
+$('pngBtn').addEventListener('click',exportPNG);
 
-// ========== COLOR MATH ==========
-function colorDist(c1, c2) {
-  const rmean = (c1[0] + c2[0]) / 2;
-  const dr = c1[0] - c2[0];
-  const dg = c1[1] - c2[1];
-  const db = c1[2] - c2[2];
-  return Math.sqrt((2 + rmean/256) * dr*dr + 4 * dg*dg + (2 + (255-rmean)/256) * db*db);
+// =============================================
+//  GENERATE PATTERN
+// =============================================
+function generate(){
+  if(!srcImg)return;
+  $('emptyMsg').style.display='none';
+  $('spinner').style.display='block';
+  cvs.style.display='none';
+  requestAnimationFrame(()=>setTimeout(doGenerate,30));
 }
 
-function nearestHama(rgb, palette) {
-  let best = palette[0], bestD = Infinity;
-  for (const c of palette) {
-    const d = colorDist(rgb, c.rgb);
-    if (d < bestD) { bestD = d; best = c; }
-  }
-  return best;
-}
+function doGenerate(){
+  const gw=+$('gridW').value;
+  const maxCol=+$('maxColors').value;
+  const thresh=+$('threshold').value;
+  const dither=$('dithering').value;
+  const removeBg=$('removeBg').checked;
+  const aspect=srcImg.height/srcImg.width;
+  const gh=Math.max(1,Math.round(gw*aspect));
 
-// K-means-ish: reduce image to N dominant colors, then map each to nearest hama
-function quantizeColors(pixels, w, h, maxColors) {
-  // Collect all pixel colors
-  const allColors = [];
-  for (let i = 0; i < pixels.length; i += 4) {
-    if (pixels[i+3] < 128) continue; // skip transparent
-    allColors.push([pixels[i], pixels[i+1], pixels[i+2]]);
-  }
+  $('hVal').textContent=gh;
 
-  // Simple median cut quantization
-  const buckets = [allColors];
-  while (buckets.length < maxColors && buckets.length < allColors.length) {
-    // Find bucket with largest range
-    let maxRange = -1, maxIdx = 0;
-    for (let i = 0; i < buckets.length; i++) {
-      const b = buckets[i];
-      if (b.length < 2) continue;
-      for (let ch = 0; ch < 3; ch++) {
-        const vals = b.map(c => c[ch]);
-        const range = Math.max(...vals) - Math.min(...vals);
-        if (range > maxRange) { maxRange = range; maxIdx = i; }
-      }
-    }
-    const bucket = buckets[maxIdx];
-    // Find channel with max range
-    let splitCh = 0, splitRange = 0;
-    for (let ch = 0; ch < 3; ch++) {
-      const vals = bucket.map(c => c[ch]);
-      const range = Math.max(...vals) - Math.min(...vals);
-      if (range > splitRange) { splitRange = range; splitCh = ch; }
-    }
-    bucket.sort((a, b) => a[splitCh] - b[splitCh]);
-    const mid = Math.floor(bucket.length / 2);
-    buckets.splice(maxIdx, 1, bucket.slice(0, mid), bucket.slice(mid));
-  }
+  // Get enabled palette colors
+  let pal=activePalette.filter(c=>c.enabled);
+  if(!pal.length){pal=activePalette;activePalette.forEach(c=>c.enabled=true);renderPaletteGrid()}
 
-  // Get average color per bucket
-  const palette = buckets.filter(b => b.length > 0).map(b => {
-    const avg = [0,0,0];
-    for (const c of b) { avg[0] += c[0]; avg[1] += c[1]; avg[2] += c[2]; }
-    return [Math.round(avg[0]/b.length), Math.round(avg[1]/b.length), Math.round(avg[2]/b.length)];
-  });
-
-  // Map each palette color to nearest hama
-  return palette.map(c => nearestHama(c, HAMA_PALETTE));
-}
-
-// ========== GENERATE PATTERN ==========
-function generatePattern() {
-  if (!sourceImage) return;
-
-  emptyState.style.display = 'none';
-  spinner.style.display = 'block';
-  previewCanvas.style.display = 'none';
-
-  requestAnimationFrame(() => {
-    setTimeout(() => {
-      try { doGenerate(); } catch(e) { console.error(e); }
-      spinner.style.display = 'none';
-    }, 50);
-  });
-}
-
-function doGenerate() {
-  const gw = parseInt(gridWidthSlider.value);
-  const style = $('styleSelect').value;
-  const maxCol = parseInt(maxColorsSlider.value);
-  const removeBg = $('removeBg').checked;
-
-  const img = sourceImage;
-  const aspect = img.height / img.width;
-  const gh = Math.round(gw * aspect);
-
-  // Draw image small
-  const tmpCanvas = document.createElement('canvas');
-  tmpCanvas.width = gw;
-  tmpCanvas.height = gh;
-  const ctx = tmpCanvas.getContext('2d');
-  ctx.drawImage(img, 0, 0, gw, gh);
-  const imageData = ctx.getImageData(0, 0, gw, gh);
-  const pixels = imageData.data;
-
-  // Get reduced palette
-  const usedHama = quantizeColors(pixels, gw, gh, maxCol);
-
-  // Remove duplicates
-  const paletteMap = new Map();
-  for (const c of usedHama) paletteMap.set(c.name, c);
-  const palette = [...paletteMap.values()];
+  // Downscale image
+  const tmp=document.createElement('canvas');
+  tmp.width=gw;tmp.height=gh;
+  const tctx=tmp.getContext('2d');
+  tctx.drawImage(srcImg,0,0,gw,gh);
+  const imgData=tctx.getImageData(0,0,gw,gh);
+  const px=imgData.data;
 
   // Background detection
-  let bgColor = null;
-  if (removeBg) {
-    // Sample corners
-    const corners = [];
-    const sample = (x, y) => {
-      const i = (y * gw + x) * 4;
-      return [pixels[i], pixels[i+1], pixels[i+2]];
-    };
-    for (let x = 0; x < Math.min(3, gw); x++)
-      for (let y = 0; y < Math.min(3, gh); y++)
-        corners.push(sample(x, y));
-    for (let x = Math.max(0, gw-3); x < gw; x++)
-      for (let y = 0; y < Math.min(3, gh); y++)
-        corners.push(sample(x, y));
-
-    // Average corner color
-    const avg = [0,0,0];
-    for (const c of corners) { avg[0] += c[0]; avg[1] += c[1]; avg[2] += c[2]; }
-    avg[0] /= corners.length; avg[1] /= corners.length; avg[2] /= corners.length;
-    bgColor = avg;
+  let bgRgb=null;
+  if(removeBg){
+    const corners=[];
+    const s=(x,y)=>{const i=(y*gw+x)*4;return[px[i],px[i+1],px[i+2]]};
+    for(let x=0;x<Math.min(3,gw);x++)for(let y=0;y<Math.min(3,gh);y++)corners.push(s(x,y));
+    for(let x=Math.max(0,gw-3);x<gw;x++)for(let y=0;y<Math.min(3,gh);y++)corners.push(s(x,y));
+    const a=[0,0,0];corners.forEach(c=>{a[0]+=c[0];a[1]+=c[1];a[2]+=c[2]});
+    bgRgb=[a[0]/corners.length,a[1]/corners.length,a[2]/corners.length];
   }
 
-  // Map each pixel
-  const grid = [];
-  const colorCount = {};
-  let totalBeads = 0;
+  // Quantize to maxCol colors from palette using k-means-ish
+  // First pass: find which palette colors are closest to image pixels
+  const pixColors=[];
+  for(let i=0;i<px.length;i+=4){
+    if(px[i+3]<128)continue;
+    pixColors.push([px[i],px[i+1],px[i+2]]);
+  }
+  // Score each palette color
+  const scores=pal.map(()=>0);
+  const sampleStep=Math.max(1,Math.floor(pixColors.length/500));
+  for(let i=0;i<pixColors.length;i+=sampleStep){
+    let best=0,bd=Infinity;
+    for(let j=0;j<pal.length;j++){
+      const d=colorDist(pixColors[i],pal[j].rgb);
+      if(d<bd){bd=d;best=j}
+    }
+    scores[best]++;
+  }
+  // Pick top maxCol
+  const ranked=scores.map((s,i)=>({s,i})).sort((a,b)=>b.s-a.s);
+  let usedPal=ranked.slice(0,maxCol).map(r=>pal[r.i]);
 
-  for (let y = 0; y < gh; y++) {
-    const row = [];
-    for (let x = 0; x < gw; x++) {
-      const i = (y * gw + x) * 4;
-      const r = pixels[i], g = pixels[i+1], b = pixels[i+2], a = pixels[i+3];
+  // Build pixel buffer for dithering
+  const buf=new Float32Array(gw*gh*3);
+  for(let y=0;y<gh;y++)for(let x=0;x<gw;x++){
+    const i=(y*gw+x)*4;
+    buf[(y*gw+x)*3]=px[i];buf[(y*gw+x)*3+1]=px[i+1];buf[(y*gw+x)*3+2]=px[i+2];
+  }
 
-      // Check if background
-      if (removeBg && bgColor && a > 128) {
-        const dist = colorDist([r,g,b], bgColor);
-        if (dist < 80) {
-          row.push(null); // empty
-          continue;
+  // Nearest color function
+  const nearest=(r,g,b)=>{
+    let best=usedPal[0],bd=Infinity;
+    for(const c of usedPal){const d=colorDist([r,g,b],c.rgb);if(d<bd){bd=d;best=c}}
+    return best;
+  };
+
+  // Bayer matrix for ordered dithering
+  const bayer=[
+    [0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]
+  ];
+
+  // Map pixels
+  const grid=[];
+  const colorCount={};
+  let totalBeads=0;
+
+  for(let y=0;y<gh;y++){
+    const row=[];
+    for(let x=0;x<gw;x++){
+      const bi=(y*gw+x)*3;
+      let r=buf[bi],g=buf[bi+1],b=buf[bi+2];
+
+      // Alpha check
+      const ai=(y*gw+x)*4;
+      if(px[ai+3]<128){row.push(null);continue}
+
+      // BG removal
+      if(bgRgb&&colorDist([r,g,b],bgRgb)<60){row.push(null);continue}
+
+      // Ordered dithering pre-adjustment
+      if(dither==='ordered'){
+        const threshold=(bayer[y%4][x%4]/16-.5)*48;
+        r=Math.max(0,Math.min(255,r+threshold));
+        g=Math.max(0,Math.min(255,g+threshold));
+        b=Math.max(0,Math.min(255,b+threshold));
+      }
+
+      const c=nearest(r,g,b);
+      row.push(c);
+      colorCount[c.id]=(colorCount[c.id]||0)+1;
+      totalBeads++;
+
+      // Floyd-Steinberg error diffusion
+      if(dither==='floyd'){
+        const er=r-c.rgb[0],eg=g-c.rgb[1],eb=b-c.rgb[2];
+        const spread=[[x+1,y,7/16],[x-1,y+1,3/16],[x,y+1,5/16],[x+1,y+1,1/16]];
+        for(const[nx,ny,w] of spread){
+          if(nx>=0&&nx<gw&&ny<gh){
+            const ni=(ny*gw+nx)*3;
+            buf[ni]+=er*w;buf[ni+1]+=eg*w;buf[ni+2]+=eb*w;
+          }
         }
       }
-      if (a < 128) {
-        row.push(null);
-        continue;
-      }
-
-      const nearest = nearestHama([r,g,b], palette);
-      row.push(nearest);
-      colorCount[nearest.name] = (colorCount[nearest.name] || 0) + 1;
-      totalBeads++;
     }
     grid.push(row);
   }
 
-  // Apply outline enhancement for "outline" style
-  if (style === 'outline') {
-    const black = HAMA_PALETTE.find(c => c.name === 'Negro');
-    // Add black outline around non-empty areas
-    const outlined = grid.map(r => [...r]);
-    for (let y = 0; y < gh; y++) {
-      for (let x = 0; x < gw; x++) {
-        if (grid[y][x] !== null) continue;
-        // Check if adjacent to a colored bead
-        let adjacent = false;
-        for (const [dx, dy] of [[-1,0],[1,0],[0,-1],[0,1]]) {
-          const nx = x + dx, ny = y + dy;
-          if (nx >= 0 && nx < gw && ny >= 0 && ny < gh && grid[ny][nx] !== null) {
-            adjacent = true;
-            break;
+  // Threshold filter: remove colors with count < threshold
+  if(thresh>0){
+    const toRemove=new Set();
+    for(const[id,cnt]of Object.entries(colorCount)){
+      if(cnt<=thresh)toRemove.add(id);
+    }
+    if(toRemove.size>0&&usedPal.length-toRemove.size>=1){
+      usedPal=usedPal.filter(c=>!toRemove.has(c.id));
+      // Re-map affected pixels
+      for(let y=0;y<gh;y++){
+        for(let x=0;x<gw;x++){
+          if(grid[y][x]&&toRemove.has(grid[y][x].id)){
+            const old=grid[y][x];
+            colorCount[old.id]-=1;
+            if(colorCount[old.id]<=0)delete colorCount[old.id];
+            const c=nearest(old.rgb[0],old.rgb[1],old.rgb[2]);
+            grid[y][x]=c;
+            colorCount[c.id]=(colorCount[c.id]||0)+1;
           }
         }
-        if (adjacent) {
-          outlined[y][x] = black;
-          colorCount[black.name] = (colorCount[black.name] || 0) + 1;
-          totalBeads++;
-        }
       }
     }
-    // Copy back
-    for (let y = 0; y < gh; y++)
-      for (let x = 0; x < gw; x++)
-        grid[y][x] = outlined[y][x];
   }
 
-  // Sort colors by count
-  const sortedColors = Object.entries(colorCount)
-    .sort((a, b) => b[1] - a[1])
-    .map(([name, count]) => ({
-      ...HAMA_PALETTE.find(c => c.name === name),
-      count
-    }));
+  // Sort colors by count desc
+  const sortedColors=Object.entries(colorCount).sort((a,b)=>b[1]-a[1]).map(([id,count])=>{
+    const c=usedPal.find(p=>p.id===id)||activePalette.find(p=>p.id===id);
+    return{...c,count};
+  }).filter(c=>c.count>0);
 
-  patternData = { grid, width: gw, height: gh, colors: sortedColors, totalBeads };
+  // Board calc
+  const bs=+$('boardSize').value;
+  const bw=bs>0?Math.ceil(gw/bs):1;
+  const bh=bs>0?Math.ceil(gh/bs):1;
 
-  // Update stats
-  statsBar.style.display = 'flex';
-  $('statSize').textContent = `${gw}x${gh}`;
-  $('statBeads').textContent = totalBeads;
-  $('statColors').textContent = sortedColors.length;
+  pattern={grid,w:gw,h:gh,colors:sortedColors,totalBeads,boardW:bw,boardH:bh,boardSize:bs};
 
-  // Color legend
-  colorLegend.style.display = 'block';
-  colorsGrid.innerHTML = sortedColors.map(c => `
-    <div class="color-item">
-      <div class="color-swatch" style="background:${c.hex}"></div>
-      <div class="color-name">${c.name}</div>
-      <div class="color-count">x${c.count}</div>
-    </div>
-  `).join('');
+  // Update UI
+  $('spinner').style.display='none';
+  $('statsBar').style.display='flex';
+  $('sSize').textContent=`${gw}x${gh}`;
+  $('sBeads').textContent=totalBeads.toLocaleString();
+  $('sColors').textContent=sortedColors.length;
+  $('sBoards').textContent=bs>0?`${bw}x${bh}`:'—';
+  $('boardsInfo').style.display=bs>0?'block':'none';
+  $('boardsCount').textContent=`${bw}x${bh} (${bw*bh})`;
 
+  // Legend
+  $('legendCard').style.display='block';
+  $('legendGrid').innerHTML=sortedColors.map((c,i)=>`
+    <div class="leg-item">
+      <div class="leg-sw" style="background:${c.hex}"></div>
+      <div><div class="leg-name">${i+1}. ${c.name}</div><div class="leg-code">${c.id} ${c.hex}</div></div>
+      <div class="leg-cnt">x${c.count}</div>
+    </div>`).join('');
+
+  $('pdfBtn').disabled=false;
+  $('pngBtn').disabled=false;
   renderPreview();
-  downloadBtn.disabled = false;
 }
 
-// ========== RENDER PREVIEW ==========
-function renderPreview() {
-  if (!patternData) return;
-  const { grid, width: gw, height: gh } = patternData;
-  const showGrid = $('showGrid').checked;
+// =============================================
+//  RENDER PREVIEW
+// =============================================
+function renderPreview(){
+  if(!pattern)return;
+  const{grid,w:gw,h:gh,boardSize:bs}=pattern;
+  const showGrid=$('showGrid').checked;
 
-  const beadSize = Math.max(8, Math.min(24, Math.floor(600 / Math.max(gw, gh))));
-  const gap = showGrid ? 1 : 0;
-  const cellSize = beadSize + gap;
+  const maxDim=Math.max(gw,gh);
+  const bead=Math.max(6,Math.min(22,Math.floor(700/maxDim)));
+  const gap=showGrid?1:0;
+  const cell=bead+gap;
 
-  const canvas = previewCanvas;
-  canvas.width = gw * cellSize + gap;
-  canvas.height = gh * cellSize + gap;
-  canvas.style.display = 'block';
-  canvas.style.maxWidth = '100%';
+  cvs.width=gw*cell+gap;cvs.height=gh*cell+gap;
+  cvs.style.display='block';
 
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#d4c5a9'; // pegboard color
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle='#d4c5a9';ctx.fillRect(0,0,cvs.width,cvs.height);
 
-  for (let y = 0; y < gh; y++) {
-    for (let x = 0; x < gw; x++) {
-      const bead = grid[y][x];
-      const px = x * cellSize + gap;
-      const py = y * cellSize + gap;
+  for(let y=0;y<gh;y++){
+    for(let x=0;x<gw;x++){
+      const b=grid[y][x];
+      const px=x*cell+gap,py=y*cell+gap;
 
-      if (bead === null) {
-        if (showGrid) {
-          // Empty pegboard dot
-          ctx.fillStyle = '#c8b998';
-          ctx.beginPath();
-          ctx.arc(px + beadSize/2, py + beadSize/2, 2, 0, Math.PI*2);
-          ctx.fill();
-        }
+      if(!b){
+        if(showGrid){ctx.fillStyle='#c8b898';ctx.beginPath();ctx.arc(px+bead/2,py+bead/2,1.5,0,Math.PI*2);ctx.fill()}
         continue;
       }
-
-      const [r, g, b] = bead.rgb;
-
-      // Bead circle
-      ctx.fillStyle = `rgb(${r},${g},${b})`;
-      ctx.beginPath();
-      ctx.arc(px + beadSize/2, py + beadSize/2, beadSize/2 - 0.5, 0, Math.PI*2);
-      ctx.fill();
-
-      // Center hole
-      ctx.fillStyle = `rgb(${Math.max(0,r-35)},${Math.max(0,g-35)},${Math.max(0,b-35)})`;
-      ctx.beginPath();
-      ctx.arc(px + beadSize/2, py + beadSize/2, beadSize/6, 0, Math.PI*2);
-      ctx.fill();
-
+      const[r,g,bl]=b.rgb;
+      ctx.fillStyle=`rgb(${r},${g},${bl})`;
+      ctx.beginPath();ctx.arc(px+bead/2,py+bead/2,bead/2-.5,0,Math.PI*2);ctx.fill();
+      // Hole
+      ctx.fillStyle=`rgb(${Math.max(0,r-30)},${Math.max(0,g-30)},${Math.max(0,bl-30)})`;
+      ctx.beginPath();ctx.arc(px+bead/2,py+bead/2,bead/6,0,Math.PI*2);ctx.fill();
       // Highlight
-      ctx.fillStyle = `rgba(255,255,255,0.25)`;
-      ctx.beginPath();
-      ctx.arc(px + beadSize/3, py + beadSize/3, beadSize/6, 0, Math.PI*2);
-      ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,.22)';
+      ctx.beginPath();ctx.arc(px+bead/3,py+bead/3,bead/7,0,Math.PI*2);ctx.fill();
     }
   }
+
+  // Board grid lines
+  if(showGrid&&bs>0){
+    ctx.strokeStyle='rgba(233,69,96,.4)';ctx.lineWidth=2;
+    for(let bx=1;bx*bs<gw;bx++){const x=bx*bs*cell;ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,cvs.height);ctx.stroke()}
+    for(let by=1;by*bs<gh;by++){const y=by*bs*cell;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(cvs.width,y);ctx.stroke()}
+  }
+
+  // Tooltip on hover
+  cvs.onmousemove=e=>{
+    const rect=cvs.getBoundingClientRect();
+    const sx=cvs.width/rect.width,sy=cvs.height/rect.height;
+    const mx=(e.clientX-rect.left)*sx,my=(e.clientY-rect.top)*sy;
+    const gx=Math.floor(mx/cell),gy=Math.floor(my/cell);
+    const tip=$('tooltip');
+    if(gx>=0&&gx<gw&&gy>=0&&gy<gh&&grid[gy][gx]){
+      const b=grid[gy][gx];
+      tip.style.display='block';
+      tip.style.left=(e.clientX-$('previewWrap').getBoundingClientRect().left+12)+'px';
+      tip.style.top=(e.clientY-$('previewWrap').getBoundingClientRect().top-30)+'px';
+      tip.innerHTML=`<b>${b.id}</b> ${b.name} <span style="color:var(--muted)">(${gx+1},${gy+1})</span>`;
+    }else{tip.style.display='none'}
+  };
+  cvs.onmouseleave=()=>{$('tooltip').style.display='none'};
 }
 
-// ========== PDF GENERATION ==========
-function downloadPDF() {
-  if (!patternData) return;
+// =============================================
+//  EXPORT PNG
+// =============================================
+function exportPNG(){
+  if(!pattern)return;
+  const a=document.createElement('a');
+  a.download='hama_pattern.png';
+  a.href=cvs.toDataURL('image/png');
+  a.click();
+}
 
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const pageW = 210, pageH = 297;
-  const margin = 15;
-  const usableW = pageW - margin * 2;
+// =============================================
+//  EXPORT PDF
+// =============================================
+function exportPDF(){
+  if(!pattern)return;
+  const{jsPDF}=window.jspdf;
+  const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const W=210,H=297,M=12,U=W-M*2;
+  const{grid,w:gw,h:gh,colors,totalBeads,boardSize:bs,boardW:bw,boardH:bh}=pattern;
+  const style=$('pdfStyle').value;
+  const cellMM=+$('cellSize').value;
 
-  const { grid, width: gw, height: gh, colors, totalBeads } = patternData;
+  // Symbols for symbol mode
+  const SYMS='●■▲◆★♦♣♥◎⬟✦⬤☆□△○⊕⊗⬥♠'.split('');
 
-  // ===== PAGE 1: Title + Pattern =====
-  // Title
-  pdf.setFontSize(22);
-  pdf.setTextColor(220, 38, 38);
-  pdf.text('Hama Bead Pattern', pageW / 2, 20, { align: 'center' });
+  // Color index map
+  const cIdx={};colors.forEach((c,i)=>{cIdx[c.id]=i});
 
-  pdf.setFontSize(11);
-  pdf.setTextColor(100);
-  pdf.text(`${gw} x ${gh} cuentas  |  ${totalBeads} total  |  ${colors.length} colores`, pageW / 2, 28, { align: 'center' });
+  // ========= PAGE 1: COVER =========
+  pdf.setFontSize(24);pdf.setTextColor(220,38,38);
+  pdf.text('Pixel Bead Studio',W/2,22,{align:'center'});
+  pdf.setFontSize(10);pdf.setTextColor(100);
+  pdf.text(`${gw} x ${gh} cuentas  |  ${totalBeads} total  |  ${colors.length} colores  |  ${bs>0?bw+'x'+bh+' tableros':'sin division'}`,W/2,30,{align:'center'});
+  pdf.text(`Marca: ${$('brand').options[$('brand').selectedIndex].text}  |  Dithering: ${$('dithering').options[$('dithering').selectedIndex].text}`,W/2,36,{align:'center'});
 
-  // Pattern grid
-  const patternTop = 35;
-  const maxPatternH = 200;
-  const cellSize = Math.min(usableW / gw, maxPatternH / gh);
-  const patternW = gw * cellSize;
-  const patternH = gh * cellSize;
-  const patternLeft = (pageW - patternW) / 2;
-
-  // Draw grid background
-  pdf.setFillColor(220, 215, 200);
-  pdf.rect(patternLeft - 1, patternTop - 1, patternW + 2, patternH + 2, 'F');
-
-  for (let y = 0; y < gh; y++) {
-    for (let x = 0; x < gw; x++) {
-      const bead = grid[y][x];
-      const px = patternLeft + x * cellSize;
-      const py = patternTop + y * cellSize;
-
-      if (bead === null) continue;
-
-      const [r, g, b] = bead.rgb;
-      pdf.setFillColor(r, g, b);
-
-      // Draw circle
-      const cx = px + cellSize / 2;
-      const cy = py + cellSize / 2;
-      const radius = cellSize / 2 - 0.2;
-      pdf.circle(cx, cy, radius, 'F');
-
-      // Grid lines (if cell big enough)
-      if (cellSize > 2) {
-        pdf.setDrawColor(180, 175, 160);
-        pdf.setLineWidth(0.05);
-        pdf.circle(cx, cy, radius, 'S');
-      }
-    }
+  // Small preview
+  const prevTop=44;
+  const maxPH=100;
+  const prevCell=Math.min(U/gw,maxPH/gh);
+  const prevW=gw*prevCell,prevH=gh*prevCell;
+  const prevL=(W-prevW)/2;
+  pdf.setFillColor(220,215,200);pdf.rect(prevL-1,prevTop-1,prevW+2,prevH+2,'F');
+  for(let y=0;y<gh;y++)for(let x=0;x<gw;x++){
+    const b=grid[y][x];if(!b)continue;
+    pdf.setFillColor(...b.rgb);
+    const cx=prevL+x*prevCell+prevCell/2,cy=prevTop+y*prevCell+prevCell/2;
+    if(prevCell>1.5)pdf.circle(cx,cy,prevCell/2-.1,'F');
+    else{pdf.rect(prevL+x*prevCell,prevTop+y*prevCell,prevCell,prevCell,'F')}
   }
 
-  // Row/column numbers every 5
-  pdf.setFontSize(5);
-  pdf.setTextColor(150);
-  for (let x = 4; x < gw; x += 5) {
-    pdf.text(String(x + 1), patternLeft + x * cellSize + cellSize/2, patternTop - 1, { align: 'center' });
-  }
-  for (let y = 4; y < gh; y += 5) {
-    pdf.text(String(y + 1), patternLeft - 2, patternTop + y * cellSize + cellSize/2 + 1, { align: 'right' });
-  }
+  // Shopping list on cover
+  let ly=prevTop+prevH+12;
+  pdf.setFontSize(14);pdf.setTextColor(220,38,38);pdf.text('Shopping List',W/2,ly,{align:'center'});ly+=8;
+  const cols=3,colW=U/cols;
+  colors.forEach((c,i)=>{
+    const col=i%cols,row=Math.floor(i/cols);
+    const cx=M+col*colW,cy=ly+row*7;
+    if(cy>H-15)return;
+    pdf.setFillColor(...c.rgb);pdf.circle(cx+3,cy-1,2.5,'F');
+    pdf.setDrawColor(150);pdf.setLineWidth(.15);pdf.circle(cx+3,cy-1,2.5,'S');
+    pdf.setFontSize(8);pdf.setTextColor(50);
+    pdf.text(`${i+1}. ${c.name}`,cx+8,cy);
+    pdf.setTextColor(220,38,38);pdf.text(`x${c.count}`,cx+colW-8,cy);
+  });
 
-  // ===== PAGE 2: Color Legend + Zoomed Sections =====
-  pdf.addPage();
+  // ========= PATTERN PAGES: BOARD BY BOARD =========
+  const boardsW=bs>0?bw:1;
+  const boardsH=bs>0?bh:1;
+  const bSize=bs>0?bs:Math.max(gw,gh);
 
-  pdf.setFontSize(18);
-  pdf.setTextColor(220, 38, 38);
-  pdf.text('Lista de Colores', pageW / 2, 20, { align: 'center' });
-
-  let cy = 32;
-  const swatchSize = 7;
-  const rowH = 10;
-
-  // Table header
-  pdf.setFontSize(9);
-  pdf.setTextColor(100);
-  pdf.text('Color', margin + 12, cy);
-  pdf.text('Nombre', margin + 30, cy);
-  pdf.text('Cantidad', margin + usableW - 30, cy);
-  pdf.text('%', margin + usableW - 5, cy);
-  cy += 4;
-  pdf.setDrawColor(200);
-  pdf.line(margin, cy, margin + usableW, cy);
-  cy += 6;
-
-  for (const color of colors) {
-    if (cy > pageH - 20) {
+  for(let by=0;by<boardsH;by++){
+    for(let bx=0;bx<boardsW;bx++){
       pdf.addPage();
-      cy = 20;
-    }
+      const startX=bx*bSize,startY=by*bSize;
+      const endX=Math.min(startX+bSize,gw),endY=Math.min(startY+bSize,gh);
+      const secW=endX-startX,secH=endY-startY;
 
-    // Swatch
-    const [r, g, b] = color.rgb;
-    pdf.setFillColor(r, g, b);
-    pdf.circle(margin + 5, cy - 1.5, 3, 'F');
-    pdf.setDrawColor(150);
-    pdf.setLineWidth(0.2);
-    pdf.circle(margin + 5, cy - 1.5, 3, 'S');
+      // Header
+      pdf.setFontSize(10);pdf.setTextColor(100);
+      const title=bs>0?`Tablero (${bx+1},${by+1}) de ${boardsW}x${boardsH}`:'Patron completo';
+      pdf.text(title,W/2,12,{align:'center'});
+      pdf.setFontSize(7);pdf.text(`Columnas ${startX+1}-${endX}  |  Filas ${startY+1}-${endY}`,W/2,17,{align:'center'});
 
-    // Name
-    pdf.setFontSize(10);
-    pdf.setTextColor(50);
-    pdf.text(color.name, margin + 12, cy);
+      // Calculate cell size to fit page
+      const fitCell=Math.min(cellMM,(U-10)/secW,(H-30)/secH);
+      const gridW=secW*fitCell,gridH=secH*fitCell;
+      const gL=(W-gridW)/2,gT=22;
 
-    // Hex
-    pdf.setFontSize(8);
-    pdf.setTextColor(130);
-    pdf.text(color.hex, margin + 55, cy);
+      // Background
+      pdf.setFillColor(245,243,238);pdf.rect(gL-.5,gT-.5,gridW+1,gridH+1,'F');
 
-    // Count
-    pdf.setFontSize(10);
-    pdf.setTextColor(220, 38, 38);
-    pdf.text(`x${color.count}`, margin + usableW - 30, cy);
+      // Draw cells
+      for(let y=0;y<secH;y++){
+        for(let x=0;x<secW;x++){
+          const b=grid[startY+y]?grid[startY+y][startX+x]:null;
+          const cx=gL+x*fitCell,cy=gT+y*fitCell;
 
-    // Percentage
-    pdf.setTextColor(130);
-    pdf.setFontSize(8);
-    const pct = ((color.count / totalBeads) * 100).toFixed(1);
-    pdf.text(`${pct}%`, margin + usableW - 5, cy);
+          if(!b){
+            pdf.setFillColor(235,233,225);pdf.rect(cx,cy,fitCell,fitCell,'F');
+            continue;
+          }
+          const[r,g,bl]=b.rgb;
+          const idx=cIdx[b.id];
+          const bright=r*.299+g*.587+bl*.114;
 
-    cy += rowH;
-  }
+          if(style==='circles'){
+            pdf.setFillColor(235,233,225);pdf.rect(cx,cy,fitCell,fitCell,'F');
+            pdf.setFillColor(r,g,bl);pdf.circle(cx+fitCell/2,cy+fitCell/2,fitCell/2-.3,'F');
+          }else if(style==='colorBox'||style==='colorNum'||style==='symbols'){
+            pdf.setFillColor(r,g,bl);pdf.rect(cx,cy,fitCell,fitCell,'F');
+            if(style==='colorNum'&&fitCell>=2.5){
+              pdf.setTextColor(bright>128?0:255);pdf.setFontSize(fitCell*.5);
+              pdf.text(String(idx+1),cx+fitCell/2,cy+fitCell*.7,{align:'center'});
+            }
+            if(style==='symbols'&&fitCell>=2.5){
+              pdf.setTextColor(bright>128?0:255);pdf.setFontSize(fitCell*.5);
+              pdf.text(SYMS[idx%SYMS.length],cx+fitCell/2,cy+fitCell*.7,{align:'center'});
+            }
+          }else if(style==='numOnly'){
+            pdf.setFillColor(255,255,255);pdf.rect(cx,cy,fitCell,fitCell,'F');
+            if(fitCell>=2){
+              pdf.setTextColor(50);pdf.setFontSize(fitCell*.45);
+              pdf.text(String(idx+1),cx+fitCell/2,cy+fitCell*.65,{align:'center'});
+            }
+          }else if(style==='symOnly'){
+            pdf.setFillColor(255,255,255);pdf.rect(cx,cy,fitCell,fitCell,'F');
+            if(fitCell>=2){
+              pdf.setTextColor(50);pdf.setFontSize(fitCell*.5);
+              pdf.text(SYMS[idx%SYMS.length],cx+fitCell/2,cy+fitCell*.7,{align:'center'});
+            }
+          }
 
-  // Total
-  cy += 4;
-  pdf.setDrawColor(200);
-  pdf.line(margin, cy, margin + usableW, cy);
-  cy += 8;
-  pdf.setFontSize(12);
-  pdf.setTextColor(50);
-  pdf.text(`Total: ${totalBeads} cuentas`, margin, cy);
-
-  // Tips section
-  cy += 14;
-  if (cy < pageH - 60) {
-    pdf.setFontSize(14);
-    pdf.setTextColor(220, 38, 38);
-    pdf.text('Tips', margin, cy);
-    cy += 8;
-    pdf.setFontSize(9);
-    pdf.setTextColor(80);
-    const tips = [
-      `Tablero: necesitas un area de al menos ${gw} x ${gh} clavijas.`,
-      'Empieza por los contornos negros para definir la forma.',
-      'Luego rellena color por color de mas a menos cantidad.',
-      'Plancha con papel de hornear a temperatura media.',
-      'Deja enfriar bajo un libro para que quede plano.',
-      'Puedes omitir las cuentas de fondo si solo quieres el personaje.',
-    ];
-    for (const tip of tips) {
-      pdf.text(`  •  ${tip}`, margin, cy);
-      cy += 6;
-    }
-  }
-
-  // ===== PAGE 3: Pixel grid reference (numbered) =====
-  pdf.addPage();
-
-  pdf.setFontSize(18);
-  pdf.setTextColor(220, 38, 38);
-  pdf.text('Patron Detallado (con numeros)', pageW / 2, 20, { align: 'center' });
-
-  const detailTop = 30;
-  const detailCellMax = Math.min((usableW - 8) / gw, (pageH - detailTop - 20) / gh);
-  const detailCell = Math.max(2, Math.min(detailCellMax, 6));
-  const detailW = gw * detailCell;
-  const detailH = gh * detailCell;
-  const detailLeft = (pageW - detailW) / 2;
-
-  // Color index mapping
-  const colorIndex = {};
-  colors.forEach((c, i) => { colorIndex[c.name] = i + 1; });
-
-  // Background
-  pdf.setFillColor(240, 238, 230);
-  pdf.rect(detailLeft - 1, detailTop - 1, detailW + 2, detailH + 2, 'F');
-
-  for (let y = 0; y < gh; y++) {
-    for (let x = 0; x < gw; x++) {
-      const bead = grid[y][x];
-      if (bead === null) continue;
-
-      const px = detailLeft + x * detailCell;
-      const py = detailTop + y * detailCell;
-      const [r, g, b] = bead.rgb;
-
-      pdf.setFillColor(r, g, b);
-      pdf.rect(px, py, detailCell, detailCell, 'F');
-
-      // Number in cell (if big enough)
-      if (detailCell >= 3.5) {
-        const idx = colorIndex[bead.name];
-        const brightness = r * 0.299 + g * 0.587 + b * 0.114;
-        pdf.setTextColor(brightness > 128 ? 0 : 255);
-        pdf.setFontSize(detailCell * 0.55);
-        pdf.text(String(idx), px + detailCell/2, py + detailCell * 0.7, { align: 'center' });
+          // Grid line
+          pdf.setDrawColor(200);pdf.setLineWidth(.05);pdf.rect(cx,cy,fitCell,fitCell,'S');
+        }
       }
 
-      // Grid
-      pdf.setDrawColor(200);
-      pdf.setLineWidth(0.05);
-      pdf.rect(px, py, detailCell, detailCell, 'S');
+      // 5-line thick grid
+      pdf.setDrawColor(120);pdf.setLineWidth(.2);
+      for(let x=5;x<secW;x+=5){pdf.line(gL+x*fitCell,gT,gL+x*fitCell,gT+secH*fitCell)}
+      for(let y=5;y<secH;y+=5){pdf.line(gL,gT+y*fitCell,gL+secW*fitCell,gT+y*fitCell)}
+
+      // Row/col numbers
+      pdf.setFontSize(4);pdf.setTextColor(150);
+      for(let x=0;x<secW;x+=5)pdf.text(String(startX+x+1),gL+x*fitCell+fitCell/2,gT-1,{align:'center'});
+      for(let y=0;y<secH;y+=5)pdf.text(String(startY+y+1),gL-2,gT+y*fitCell+fitCell/2+1,{align:'right'});
+
+      // Mini color key at bottom
+      const keyY=gT+gridH+6;
+      if(keyY<H-20){
+        pdf.setFontSize(6);
+        const kCols=Math.min(6,colors.length);
+        const kColW=U/kCols;
+        colors.forEach((c,i)=>{
+          const col=i%kCols,row=Math.floor(i/kCols);
+          const kx=M+col*kColW,ky=keyY+row*5;
+          if(ky>H-8)return;
+          pdf.setFillColor(...c.rgb);
+          pdf.rect(kx,ky-2.5,3.5,3.5,'F');
+          pdf.setTextColor(60);
+          pdf.text(`${i+1}=${c.name} (x${c.count})`,kx+5,ky);
+        });
+      }
     }
   }
 
-  // Row/col numbers
-  pdf.setFontSize(4);
-  pdf.setTextColor(150);
-  for (let x = 0; x < gw; x += 5) {
-    pdf.text(String(x + 1), detailLeft + x * detailCell + detailCell/2, detailTop - 1, { align: 'center' });
-  }
-  for (let y = 0; y < gh; y += 5) {
-    pdf.text(String(y + 1), detailLeft - 2, detailTop + y * detailCell + detailCell/2 + 1, { align: 'right' });
+  // ========= LAST PAGE: FULL COLOR LEGEND =========
+  pdf.addPage();
+  pdf.setFontSize(18);pdf.setTextColor(220,38,38);
+  pdf.text('Lista Completa de Colores',W/2,18,{align:'center'});
+  let ty=28;
+  // Table header
+  pdf.setFontSize(8);pdf.setTextColor(130);
+  pdf.text('#',M,ty);pdf.text('Color',M+8,ty);pdf.text('Nombre',M+24,ty);pdf.text('Codigo',M+75,ty);pdf.text('Hex',M+100,ty);pdf.text('Cantidad',M+130,ty);pdf.text('%',M+160,ty);
+  ty+=3;pdf.setDrawColor(200);pdf.line(M,ty,M+U,ty);ty+=5;
+
+  colors.forEach((c,i)=>{
+    if(ty>H-20){pdf.addPage();ty=18}
+    pdf.setFillColor(...c.rgb);pdf.circle(M+4,ty-1.5,3,'F');
+    pdf.setDrawColor(180);pdf.setLineWidth(.15);pdf.circle(M+4,ty-1.5,3,'S');
+    pdf.setFontSize(9);pdf.setTextColor(50);
+    pdf.text(String(i+1),M+10,ty);
+    pdf.text(c.name,M+24,ty);
+    pdf.setTextColor(130);pdf.setFontSize(8);
+    pdf.text(c.id,M+75,ty);
+    pdf.text(c.hex,M+100,ty);
+    pdf.setTextColor(220,38,38);pdf.setFontSize(9);
+    pdf.text(`x${c.count}`,M+130,ty);
+    pdf.setTextColor(100);pdf.setFontSize(8);
+    pdf.text(`${(c.count/totalBeads*100).toFixed(1)}%`,M+160,ty);
+    ty+=8;
+  });
+
+  ty+=6;pdf.setDrawColor(200);pdf.line(M,ty,M+U,ty);ty+=8;
+  pdf.setFontSize(12);pdf.setTextColor(50);
+  pdf.text(`Total: ${totalBeads.toLocaleString()} cuentas`,M,ty);
+
+  // Tips
+  ty+=14;
+  if(ty<H-50){
+    pdf.setFontSize(13);pdf.setTextColor(220,38,38);pdf.text('Tips',M,ty);ty+=7;
+    pdf.setFontSize(8.5);pdf.setTextColor(80);
+    [
+      `Tablero: necesitas un area de al menos ${gw} x ${gh} clavijas (${bs>0?bw+'x'+bh+' tableros de '+bs+'x'+bs:'tablero grande'}).`,
+      'Empieza colocando los contornos/colores oscuros para definir la forma.',
+      'Luego rellena los colores principales de mayor a menor cantidad.',
+      'Plancha con papel de hornear a temperatura media (2-3 de 5).',
+      'Plancha ambos lados para mayor durabilidad.',
+      'Deja enfriar bajo un libro pesado para que quede plano.',
+      'Los pixeles vacios son huecos — no coloques cuenta ahi.',
+      `Generado con Pixel Bead Studio — ${new Date().toLocaleDateString()}`,
+    ].forEach(t=>{pdf.text(`  •  ${t}`,M,ty);ty+=5.5});
   }
 
-  // Color key at bottom
-  let keyY = detailTop + detailH + 8;
-  if (keyY < pageH - 30) {
-    pdf.setFontSize(8);
-    pdf.setTextColor(100);
-    pdf.text('Clave de colores:', margin, keyY);
-    keyY += 5;
-    const cols = 4;
-    const colW = usableW / cols;
-    colors.forEach((c, i) => {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const kx = margin + col * colW;
-      const ky = keyY + row * 6;
-      if (ky > pageH - 10) return;
-      pdf.setFillColor(...c.rgb);
-      pdf.rect(kx, ky - 3, 4, 4, 'F');
-      pdf.setTextColor(60);
-      pdf.setFontSize(6);
-      pdf.text(`${i+1} = ${c.name} (x${c.count})`, kx + 6, ky);
-    });
-  }
-
-  // Save
   pdf.save('hama_bead_pattern.pdf');
 }
 </script>
